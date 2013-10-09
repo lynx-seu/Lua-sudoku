@@ -1,11 +1,15 @@
 
 local font_30 = love.graphics.newFont( "coolvetica.ttf", 30)
+local font_16 = love.graphics.newFont( "coolvetica.ttf", 16)
 
 function giveBoard()
 
 	local game = {}
 	
-	game.paused = false
+	game.state = "pregame"
+	-- "pregame" 	- before board generation  --sounds weird
+	-- "play" 		- normal play state
+	-- "pause" 		- paused
 	
 	game.drawing = {}
 	game.drawing.step = 40
@@ -86,14 +90,22 @@ function giveBoard()
 	
 --[[ main draw function ]]
 	function game:draw()
-		self:drawBoard()
+		if self.state == "pregame" then
+			self:drawBorder()
+		elseif self.state == "play" then
+			self:drawBoard()
+		end
+		self:drawGUI()
 	end
 	
 --[[ draws only edges ]]
 	function game:drawBorder()
 		love.graphics.setLineWidth(3)
 		love.graphics.setColor( 255, 255, 255 )
-		love.graphics.rectangle( self.drawing.min, self.drawing.min, self.drawing.step*9, self.drawing.step*9 )
+		love.graphics.line( self.drawing.min, self.drawing.min, self.drawing.min + self.drawing.step * 9, self.drawing.min )
+		love.graphics.line( self.drawing.min, self.drawing.min, self.drawing.min, self.drawing.min + self.drawing.step * 9 )
+		love.graphics.line( self.drawing.min + self.drawing.step * 9 , self.drawing.min + self.drawing.step * 9 , self.drawing.min + self.drawing.step * 9, self.drawing.min )
+		love.graphics.line( self.drawing.min + self.drawing.step * 9 , self.drawing.min + self.drawing.step * 9 , self.drawing.min, self.drawing.min + self.drawing.step * 9 )
 	end
 	
 --[[ draws the whole board ]]
@@ -143,7 +155,8 @@ function giveBoard()
 		love.graphics.setFont( font_30 )
 		for x = 1, 9 do
 			for y = 1, 9 do
-				local num, lock = self.field[x][y].val, self.field[x][y].ed
+				--local num, lock = self.field[x][y].val, self.field[x][y].ed
+				local num, lock = self:getNumber(x, y)
 				
 				if validSelection( num ) then 
 					--love.graphics.print(num, min + (x - 0.5) * step, min + (y - 0.5) * step, 0)--, step/3*2, step/3*2)--, step * 0.5, step*0.5 )
@@ -161,12 +174,29 @@ function giveBoard()
 		
 	end
 	
+--[[ draws GUI ]]
+	function game:drawGUI()
+		if self.state == "pregame" then
+			love.graphics.print( "Press 1 for a garbled random board", 100, 100 )
+			love.graphics.print( "Press 2 for a totally empty board", 100, 120 )
+		end
+	
+	end
 	
 --[[ keypress handling ]]
 	function game:keyPress(k, u)
+		if self.state == "pregame" then
+			if k == "1" then
+				self:testBed()
+				self.state = "play"
+			elseif k == "2" then
+				self.state = "play"
+			end
+			return
+		end
 	
 		local numberKey = validKey( k ) --current key
-		if numberKey then 
+		if numberKey and self.state == "play" then 
 			self:handleKeyNumber(numberKey) 
 			return --don't continue keypress, not that it's required now
 		end
@@ -177,8 +207,10 @@ function giveBoard()
 	function game:handleKeyNumber(num)
 	
 		if num == -1 then -- doesn't do anything yet
-			if validSelection( self.selection.last[0] ) and validSelection( self.selection.last[1] ) then
-					self.selection.last = 0
+			if validSelection( self.selection.last[1] ) and validSelection( self.selection.last[2] ) then
+					self.selection.square 		= self.selection.last[1]
+					self.selection.subsquare 	= self.selection.last[2]
+					self.selection.last = nil
 			end			
 		elseif num == 0 then -- backs a selection
 			if validSelection( self.selection.subsquare ) and validSelection( self.selection.square ) then
@@ -206,6 +238,7 @@ function giveBoard()
 	
 --[[subsquare method of setting numbers]]
 	function game:setNumber( num, sub, sq )
+		self.selection.last = { self.selection.square, self.selection.subsquare }
 		self.selection.number 		= 0
 		self.selection.subsquare 	= 0
 		self.selection.square 		= 0
