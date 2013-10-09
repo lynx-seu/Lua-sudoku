@@ -18,7 +18,8 @@ function giveBoard()
 	
 	game.options = {}
 	
-	--[[
+--[[  -=Table structure=-
+	
 	row| 1 2 3 4 5 6 7 8 9           
 	---+-----------------          
 	   | 1 2 3 4 5 6 7 8 9       
@@ -32,7 +33,7 @@ function giveBoard()
 	   | 1 2 3 4 5 6 7 8 9
 	]]
 	
-	--[[
+	--[[  Square/subsquare structure  (numpad)
 	
 	   |   |		789|789|798
 	 7 | 8 | 9		456|456|456
@@ -47,6 +48,7 @@ function giveBoard()
 	   |   |		123|123|123
 	]]
 	
+--[[ board initialization ]]
 	function game:createBoard()
 		self.field = {}
 		
@@ -64,7 +66,7 @@ function giveBoard()
 	end
 	
 	
---[[sukuria lentà su atsitiktiniais skaiciais]]
+--[[ makes random value table]]
 	function game:testBed()
 		for i = 1, 9 do
 			for j = 1, 9 do
@@ -82,29 +84,29 @@ function giveBoard()
 		--self:testBed()
 	end
 	
---[[pieğia lentà]]
+--[[ main draw function ]]
 	function game:draw()
 		self:drawBoard()
 	end
 	
---[[pieğia tik krağtus]]
+--[[ draws only edges ]]
 	function game:drawBorder()
 		love.graphics.setLineWidth(3)
 		love.graphics.setColor( 255, 255, 255 )
 		love.graphics.rectangle( self.drawing.min, self.drawing.min, self.drawing.step*9, self.drawing.step*9 )
 	end
 	
---[[pieğia visà lentà]]
+--[[ draws the whole board ]]
 	function game:drawBoard()
 	
-	--[[kintamieji]]
+	--[[ variables ]]
 		local step = self.drawing.step
 		local min = self.drawing.min
 		local max = min + 9 * step
 	
 		love.graphics.setColor( 255, 255, 255 )
 	
-	--[[pieğia tinklelá]]
+	--[[ draws the net ]]
 		for i = 0, 9 do
 			if i % 3 == 0 then 
 				love.graphics.setLineWidth(3)
@@ -115,7 +117,7 @@ function giveBoard()
 			love.graphics.line( min			  , min + i * step, max			  , min + i * step )
 		end
 		
-	--[[pieğia şymëjimus]]
+	--[[ draws selections ]]
 		if validSelection( self.selection.subsquare ) and validSelection( self.selection.square ) then
 			love.graphics.setColor( 0, 120, 0 )
 			love.graphics.setLineWidth(3)
@@ -137,7 +139,7 @@ function giveBoard()
 			love.graphics.rectangle( "line", sx, sy, step * 3, step * 3 )
 		end
 		
-	--[[pieğia skaièius]]
+	--[[ draws numbers]]
 		love.graphics.setFont( font_30 )
 		for x = 1, 9 do
 			for y = 1, 9 do
@@ -160,38 +162,49 @@ function giveBoard()
 	end
 	
 	
---[[reguliuoja mygtukø paspaudimas]]
+--[[ keypress handling ]]
 	function game:keyPress(k, u)
 	
-		local num = validKey( k )
-		if not num  then return end
+		local numberKey = validKey( k ) --current key
+		if numberKey then 
+			self:handleKeyNumber(numberKey) 
+			return --don't continue keypress, not that it's required now
+		end
 		
-		if num == -1 then
+	end
+	
+--[[ handle selection press ]]
+	function game:handleKeyNumber(num)
+	
+		if num == -1 then -- doesn't do anything yet
 			if validSelection( self.selection.last[0] ) and validSelection( self.selection.last[1] ) then
 					self.selection.last = 0
 			end			
-		elseif num == 0 then
+		elseif num == 0 then -- backs a selection
 			if validSelection( self.selection.subsquare ) and validSelection( self.selection.square ) then
 				self.selection.subsquare = 0
 			elseif validSelection( self.selection.square ) then
 				self.selection.square = 0
 			end
-		elseif validSelection( self.selection.subsquare ) then 
+		elseif validSelection( self.selection.subsquare ) then  -- tries to set a value
 			self:setNumber( num, self.selection.subsquare, self.selection.square )
-		elseif validSelection( self.selection.square ) then 
+		elseif validSelection( self.selection.square ) then -- sets selection to a valid sub-square
 			if validSelection( num ) then
-				local cx, cy = coordinateFromSquares( self.selection.square, num )
-				if self.field[cx][cy].ed then
+				--local cx, cy = coordinateFromSquares( self.selection.square, num )
+				--if self.field[cx][cy].ed then
+				--	self.selection.subsquare = num
+				--end
+				if self:getNumberSq( self.selection.square, num, true ).ed then
 					self.selection.subsquare = num
 				end
 			end
-		else
+		else -- sets a slection square
 			self.selection.square = num
 		end
 		
 	end
-
---[[skaièiaus keitimas]]
+	
+--[[subsquare method of setting numbers]]
 	function game:setNumber( num, sub, sq )
 		self.selection.number 		= 0
 		self.selection.subsquare 	= 0
@@ -199,6 +212,7 @@ function giveBoard()
 				
 		local cx, cy = coordinateFromSquares( sq, sub )
 				
+		--check if allowed to change number
 		if self.field[cx][cy].ed then 
 			self.field[cx][cy].val = num
 			self.selection.number 		= 0
@@ -206,23 +220,24 @@ function giveBoard()
 			self.selection.square 		= 0
 			return true
 		end
+		
 		return false
 	end
 	
-	--[[grazina skaiciu ir keiciamuma ARBA langelio struktura]]
+	--[[based on squares returns value and edit flag OR the cell table]]
 	function game:getNumberSq(sub, sq, tab)
 		local cx, cy = coordinateFromSquares( sq, sub )
 		if tab then return self.field[cx][cy] end
 		return self.field[cx][cy].val, self.field[cx][cy].ed
 	end
 	
-	--[[grazina skaiciu ir keiciamuma ARBA langelio struktura]]
+	--[[based on x,y returns value and edit flag OR the cell table]]
 	function game:getNumber(x, y, tab)
 		if tab then return self.field[x][y] end
 		return self.field[x][y].val, self.field[x][y].ed
 	end
 	
-	--[[grazina eilutes reiksmes]]
+	--[[ returns a list with values from row ]]
 	function game:getRowList( row )
 		local tab = {}
 		for i = 1, 9 do
@@ -232,7 +247,7 @@ function giveBoard()
 		return tab
 	end
 	
-	--[[grazina eilutes reiksmes]]
+	--[[ returns a list with values from column ]]
 	function game:getColumnList( column )
 		local tab = {}
 		for i = 1, 9 do
@@ -242,7 +257,7 @@ function giveBoard()
 		return tab
 	end
 	
-	--[[grazina kvadranto reiksmes]]
+	--[[ returns a list with values from a square ]]
 	function game:getSquareList( sq )
 		local tab = {}
 		for i = 1, 9 do
@@ -252,7 +267,8 @@ function giveBoard()
 		return tab
 	end
 	
-	--[[sumuoja vienodas reiksmes]]
+	--[[ returns a table of duplicates]]
+	--[[ key is number, value is times it appears ]]
 	function game:getDuplicateSumTable( tab )
 		test = {}
 		for k, v in pairs( tab ) do
@@ -261,6 +277,7 @@ function giveBoard()
 		return test
 	end
 	
+	--[[ returns if table has duplicates ]]
 	function game:areDuplicates( tab, num )
 		return tab[num] or 0
 	end
@@ -272,11 +289,13 @@ function giveBoard()
 end
 
 function validSelection( num )
-	if not type(num) == "number" then return false end
-	if num > 0 and num < 10 then return true end
+	if type(num) == "number" then 
+		return num > 0 and num < 10 
+	end
 	return false 
 end
 
+--[[ filters and transforms keyboard input ]]
 function validKey( key )
 	if key == "kp0" or key == "0" then return 0 end
 	if key == "kp1" or key == "1" then return 1 end
@@ -289,9 +308,10 @@ function validKey( key )
 	if key == "kp8" or key == "8" then return 8 end
 	if key == "kp9" or key == "9" then return 9 end
 	if key == "kp." or key == "." then return -1 end
+	return nil
 end
 
---[[transliuoja numpad skaicius i koordinates]]
+--[[translates square into relative coordinates]]
 function translateNumber( num )
 	if num == 1 then return 0, 2 end
 	if num == 2 then return 1, 2 end
@@ -305,7 +325,7 @@ function translateNumber( num )
 	return nil
 end
 
---[[transliuoja numpad seka i nuoseklius skaicius]]
+--[[ translates numpad sequence into normal sequence ]]
 function selectionToArray( num )
 	if num == 1 then return 7 end
 	if num == 2 then return 8 end
@@ -318,14 +338,14 @@ function selectionToArray( num )
 	if num == 9 then return 3 end
 end
 
---[[vercia kvadrantus i koordinates]]
+--[[transforms squares into absolute coordinates]]
 function coordinateFromSquares( sq, sub )
 	local nx, ny = translateNumber( sq )
 	local sx, sy = translateNumber( sub )
 	return nx * 3 + sx + 1, ny * 3 + sy + 1
 end
 
---[[vercia absoliucias koordinates i kvadrantus]]
+--[[transforms absolute coordinates into squares]]
 function squaresFromCoordinates( x, y )
 	local subx = (x - 1) % 3
 	local sqx  = ((x - 1) - subx) / 3
@@ -334,7 +354,7 @@ function squaresFromCoordinates( x, y )
 	return numbersFromCoordinates( sqx, sqy ), numbersFromCoordinates( suby, sqy )
 end
 
---[[vercia koordinates i kvadranta ]]
+--[[transforms relative coordinates into square]]
 function numbersFromCoordinates( x, y )
 	if x == 0 and y == 0 then return 7 end
 	if x == 1 and y == 0 then return 8 end
@@ -348,12 +368,12 @@ function numbersFromCoordinates( x, y )
 	return 0
 end
 
---[[patogumo funkcija atsitiktinumui]]
+--[[utility function for random probability]]
 function testL( level )
 	return math.random() < level
 end
 
---[[patogumo funkcija skaiciams]]
+--[[utility function for random numbers]]
 function testN()
 	return math.floor( math.random() * 8 + 1 )
 end

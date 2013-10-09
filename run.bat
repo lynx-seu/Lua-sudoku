@@ -1,2 +1,2 @@
 @echo off
-love %cd%
+start love %cd%
