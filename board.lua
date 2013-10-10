@@ -1,6 +1,7 @@
 
 local font_30 = love.graphics.newFont( "coolvetica.ttf", 30)
 local font_16 = love.graphics.newFont( "coolvetica.ttf", 16)
+local font_debug = love.graphics.newFont( "coolvetica.ttf", 10)
 
 function giveBoard()
 
@@ -75,7 +76,10 @@ function giveBoard()
 		for i = 1, 9 do
 			for j = 1, 9 do
 				if testL(0.25) then
-					self.field[i][j] = {val = testN(), ed = testL(0.25)}
+					local n = testN()
+					if n then 
+						self.field[i][j] = {val = n, ed = testL(0.25) }
+					end
 				end
 			end
 		end
@@ -152,12 +156,14 @@ function giveBoard()
 		end
 		
 	--[[ draws numbers]]
-		love.graphics.setFont( font_30 )
+		
 		for x = 1, 9 do
 			for y = 1, 9 do
 				--local num, lock = self.field[x][y].val, self.field[x][y].ed
 				local num, lock = self:getNumber(x, y)
 				
+
+					
 				if validSelection( num ) then 
 					--love.graphics.print(num, min + (x - 0.5) * step, min + (y - 0.5) * step, 0)--, step/3*2, step/3*2)--, step * 0.5, step*0.5 )
 					if not lock then
@@ -165,8 +171,20 @@ function giveBoard()
 					else
 						love.graphics.setColor( 155, 155, 155 )
 					end
+					love.graphics.setFont( font_30 )
 					love.graphics.print(num, min + (x - 0.5) * step, min + (y - 0.5) * step, 0, 1, 1, 8, 17)--, step/3*2, step/3*2)--, step * 0.5, step*0.5 )
 					--love.graphics.print( text, x, y, r, sx, sy, ox, oy, kx, ky )
+				end
+				
+				love.graphics.setColor( 255, 255, 255 )
+				love.graphics.setFont( font_debug )
+				love.graphics.print(num, min + (x - 1.0) * step + 4, min + (y - 1.0) * step + 3)--, step/3*2, step/3*2)--, step * 0.5, step*0.5 )
+				if lock then
+					love.graphics.setColor( 0, 200, 0 )
+					love.graphics.print( "t", min + (x - 1.0) * step + 4, min + (y - 1.0) * step + 13)
+				else
+					love.graphics.setColor( 200, 0, 0 )
+					love.graphics.print( "f", min + (x - 1.0) * step + 4, min + (y - 1.0) * step + 13)
 				end
 				
 			end
@@ -179,6 +197,8 @@ function giveBoard()
 		if self.state == "pregame" then
 			love.graphics.print( "Press 1 for a garbled random board", 100, 100 )
 			love.graphics.print( "Press 2 for a totally empty board", 100, 120 )
+			love.graphics.setColor( 100, 0, 0 )
+			love.graphics.print( "Press 3 for a test filling algorithm", 100, 140 ) --not yet
 		end
 	
 	end
@@ -208,10 +228,10 @@ function giveBoard()
 	
 		if num == -1 then -- doesn't do anything yet
 			if validSelection( self.selection.last[1] ) and validSelection( self.selection.last[2] ) then
-					self.selection.square 		= self.selection.last[1]
-					self.selection.subsquare 	= self.selection.last[2]
-					self.selection.last = nil
-			end			
+				self.selection.square 		= self.selection.last[1]
+				self.selection.subsquare 	= self.selection.last[2]
+				self.selection.last = nil
+			end
 		elseif num == 0 then -- backs a selection
 			if validSelection( self.selection.subsquare ) and validSelection( self.selection.square ) then
 				self.selection.subsquare = 0
@@ -251,14 +271,14 @@ function giveBoard()
 			self.selection.number 		= 0
 			self.selection.subsquare 	= 0
 			self.selection.square 		= 0
-			return true
+			return true -- SUCCESS
 		end
 		
-		return false
+		return false --UNSUCCESS
 	end
 	
 	--[[based on squares returns value and edit flag OR the cell table]]
-	function game:getNumberSq(sub, sq, tab)
+	function game:getNumberSq(sq, sub, tab)
 		local cx, cy = coordinateFromSquares( sq, sub )
 		if tab then return self.field[cx][cy] end
 		return self.field[cx][cy].val, self.field[cx][cy].ed
