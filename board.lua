@@ -123,40 +123,17 @@ function giveBoard()
 		love.graphics.setColor( 255, 255, 255 )
 	
 	--[[ draws the net ]]
-		for i = 0, 9 do
-			if i % 3 == 0 then 
-				love.graphics.setLineWidth(3)
-			else
-				love.graphics.setLineWidth(1)
-			end
-			love.graphics.line( min + i * step, min 		  , min + i * step, max 		   )
-			love.graphics.line( min			  , min + i * step, max			  , min + i * step )
-		end
+		self:drawGrid(step, min, max)
 		
 	--[[ draws selections ]]
-		if validSelection( self.selection.subsquare ) and validSelection( self.selection.square ) then
-			love.graphics.setColor( 0, 120, 0 )
-			love.graphics.setLineWidth(3)
-			local x, y = translateNumber( self.selection.square )
-			local sx, sy = min + step * 3 * x, min + step * 3 * y
-			love.graphics.rectangle( "line", sx, sy, step * 3, step * 3 )
-			
-			love.graphics.setColor( 0, 255, 0 )
-			love.graphics.setLineWidth(1)
-			x, y = translateNumber( self.selection.subsquare )
-			local dx, dy = sx + x * step, sy + y * step
-			love.graphics.rectangle( "line", dx, dy, step, step )
-		elseif validSelection( self.selection.square ) then
-			love.graphics.setColor( 0, 255, 0 )
-			love.graphics.setLineWidth(3)
-			local x, y = translateNumber( self.selection.square )
-			love.graphics.setLineWidth(3)
-			local sx, sy = min + step * 3 * x, min + step * 3 * y
-			love.graphics.rectangle( "line", sx, sy, step * 3, step * 3 )
-		end
+		self:drawSelections(step, min, max)
 		
 	--[[ draws numbers]]
+		self:drawNumbers(step, min, max)
 		
+	end
+	
+	function game:drawNumbers(step, min, max)
 		for x = 1, 9 do
 			for y = 1, 9 do
 				--local num, lock = self.field[x][y].val, self.field[x][y].ed
@@ -189,7 +166,42 @@ function giveBoard()
 				
 			end
 		end
-		
+	
+	end
+	
+	function game:drawGrid(step, min, max)
+		for i = 0, 9 do
+			if i % 3 == 0 then 
+				love.graphics.setLineWidth(3)
+			else
+				love.graphics.setLineWidth(1)
+			end
+			love.graphics.line( min + i * step, min 		  , min + i * step, max 		   )
+			love.graphics.line( min			  , min + i * step, max			  , min + i * step )
+		end
+	end
+	
+	function game:drawSelections(step, min, max)
+		if validSelection( self.selection.subsquare ) and validSelection( self.selection.square ) then
+			love.graphics.setColor( 0, 120, 0 )
+			love.graphics.setLineWidth(3)
+			local x, y = translateNumber( self.selection.square )
+			local sx, sy = min + step * 3 * x, min + step * 3 * y
+			love.graphics.rectangle( "line", sx, sy, step * 3, step * 3 )
+			
+			love.graphics.setColor( 0, 255, 0 )
+			love.graphics.setLineWidth(1)
+			x, y = translateNumber( self.selection.subsquare )
+			local dx, dy = sx + x * step, sy + y * step
+			love.graphics.rectangle( "line", dx, dy, step, step )
+		elseif validSelection( self.selection.square ) then
+			love.graphics.setColor( 0, 255, 0 )
+			love.graphics.setLineWidth(3)
+			local x, y = translateNumber( self.selection.square )
+			love.graphics.setLineWidth(3)
+			local sx, sy = min + step * 3 * x, min + step * 3 * y
+			love.graphics.rectangle( "line", sx, sy, step * 3, step * 3 )
+		end
 	end
 	
 --[[ draws GUI ]]
@@ -320,20 +332,21 @@ function giveBoard()
 		return tab
 	end
 	
+	
 	--[[ returns a table of duplicates]]
 	--[[ key is number, value is times it appears ]]
-	function game:getDuplicateSumTable( tab )
+--[[	function game:getDuplicateSumTable( tab )
 		test = {}
 		for k, v in pairs( tab ) do
 			test[v] = (test[v] or 0) + 1
 		end
 		return test
-	end
+	end]]
 	
 	--[[ returns if table has duplicates ]]
-	function game:areDuplicates( tab, num )
+--[[	function game:areDuplicates( tab, num )
 		return tab[num] or 0
-	end
+	end]]
 	
 	--function game:
 	
