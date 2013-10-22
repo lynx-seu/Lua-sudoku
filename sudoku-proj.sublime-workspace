@@ -1,0 +1,285 @@
+{
+	"auto_complete":
+	{
+		"selected_items":
+		[
+			[
+				"sq",
+				"Square"
+			],
+			[
+				"squares",
+				"squaresFromCoordinates"
+			],
+			[
+				"col",
+				"column"
+			]
+		]
+	},
+	"buffers":
+	[
+		{
+			"file": "main.lua",
+			"settings":
+			{
+				"buffer_size": 799,
+				"line_ending": "Windows"
+			}
+		},
+		{
+			"contents": "\nlocal font_30 = love.graphics.newFont( \"coolvetica.ttf\", 30)\nlocal font_16 = love.graphics.newFont( \"coolvetica.ttf\", 16)\nlocal font_debug = love.graphics.newFont( \"coolvetica.ttf\", 10)\n\nfunction giveBoard()\n\n	local game = {}\n	\n	game.state = \"pregame\"\n	-- \"pregame\" 	- before board generation  --sounds weird\n	-- \"play\" 		- normal play state\n	-- \"pause\" 		- paused\n	\n	game.drawing = {}\n	game.drawing.step = 40\n	game.drawing.min  = 30\n	\n	game.selection = {}\n	game.selection.square = 0\n	game.selection.subsquare = 0\n	game.selection.last = { 0, 0 }\n	\n	game.options = {}\n\n	game.correctness = {}\n	game.correctness.rows = {}\n	game.correctness.columns = {}\n	game.correctness.squares = {}\n	\n--[[  -=Table structure=-\n	\n	row| 1 2 3 4 5 6 7 8 9           \n	---+-----------------          \n	   | 1 2 3 4 5 6 7 8 9       \n	   | 1 2 3 4 5 6 7 8 9\n	   | 1 2 3 4 5 6 7 8 9\n	   | 1 2 3 4 5 6 7 8 9\n	   | 1 2 3 4 5 6 7 8 9\n	   | 1 2 3 4 5 6 7 8 9\n	   | 1 2 3 4 5 6 7 8 9\n	   | 1 2 3 4 5 6 7 8 9\n	   | 1 2 3 4 5 6 7 8 9\n	]]\n	\n	--[[  Square/subsquare structure  (numpad)\n	\n	   |   |		789|789|798\n	 7 | 8 | 9		456|456|456\n	   |   |		123|123|123\n	---+---+---		---+---+---\n	   |   |		789|789|789\n	 4 | 5 | 6		456|456|456\n	   |   |		123|123|123\n	---+---+---		---+---+---\n	   |   |		789|789|789\n	 1 | 2 | 3		456|456|456\n	   |   |		123|123|123\n	]]\n	\n--[[ board initialization ]]\n	function game:createBoard()\n		self.field = {}\n		\n		for i = 1, 9 do\n			self.field[i] = {}\n			for j = 1, 9 do\n				--sudoku cell data\n				-- val 	- number\n				-- ed	- editable\n				-- col	- color\n				self.field[i][j] = {val = 0, ed = true}\n			end\n		end\n		\n	end\n	\n	\n--[[ makes random value table]]\n	function game:testBed()\n		for i = 1, 9 do\n			for j = 1, 9 do\n				if testL(0.25) then\n					local n = testN()\n					if n then \n						self.field[i][j] = {val = n, ed = testL(0.25) }\n					end\n				end\n			end\n		end\n	end\n	\n--[[uþkrauna þaidimà su taisyklëmis]]\n	function game:load( settings )\n		self.options = settings\n		self:createBoard()\n		--self:testBed()\n	end\n	\n--[[ main draw function ]]\n	function game:draw()\n		if self.state == \"pregame\" then\n			self:drawBorder()\n		elseif self.state == \"play\" then\n			self:drawBoard()\n		end\n		self:drawGUI()\n	end\n	\n--[[ draws only edges ]]\n	function game:drawBorder()\n		love.graphics.setLineWidth(3)\n		love.graphics.setColor( 255, 255, 255 )\n		love.graphics.line( self.drawing.min, self.drawing.min, self.drawing.min + self.drawing.step * 9, self.drawing.min )\n		love.graphics.line( self.drawing.min, self.drawing.min, self.drawing.min, self.drawing.min + self.drawing.step * 9 )\n		love.graphics.line( self.drawing.min + self.drawing.step * 9 , self.drawing.min + self.drawing.step * 9 , self.drawing.min + self.drawing.step * 9, self.drawing.min )\n		love.graphics.line( self.drawing.min + self.drawing.step * 9 , self.drawing.min + self.drawing.step * 9 , self.drawing.min, self.drawing.min + self.drawing.step * 9 )\n	end\n	\n--[[ draws the whole board ]]\n	function game:drawBoard()\n	\n	--[[ variables ]]\n		local step = self.drawing.step\n		local min = self.drawing.min\n		local max = min + 9 * step\n	\n		love.graphics.setColor( 255, 255, 255 )\n	\n	--[[ draws the net ]]\n		self:drawGrid(step, min, max)\n		\n	--[[ draws selections ]]\n		self:drawSelections(step, min, max)\n		\n	--[[ draws numbers]]\n		self:drawNumbers(step, min, max)\n		\n	end\n	\n	function game:drawNumbers(step, min, max)\n		for x = 1, 9 do\n			for y = 1, 9 do\n				--local num, lock = self.field[x][y].val, self.field[x][y].ed\n				local num, lock = self:getNumber(x, y)\n				\n\n					\n				if validSelection( num ) then \n					--love.graphics.print(num, min + (x - 0.5) * step, min + (y - 0.5) * step, 0)--, step/3*2, step/3*2)--, step * 0.5, step*0.5 )\n					if not lock then\n						love.graphics.setColor( 255, 255, 255 )\n					else\n						love.graphics.setColor( 155, 155, 155 )\n					end\n					love.graphics.setFont( font_30 )\n					love.graphics.print(num, min + (x - 0.5) * step, min + (y - 0.5) * step, 0, 1, 1, 8, 17)--, step/3*2, step/3*2)--, step * 0.5, step*0.5 )\n					--love.graphics.print( text, x, y, r, sx, sy, ox, oy, kx, ky )\n				end\n				\n				love.graphics.setColor( 255, 255, 255 )\n				love.graphics.setFont( font_debug )\n				love.graphics.print(num, min + (x - 1.0) * step + 4, min + (y - 1.0) * step + 3)--, step/3*2, step/3*2)--, step * 0.5, step*0.5 )\n				if lock then\n					love.graphics.setColor( 0, 200, 0 )\n					love.graphics.print( \"t\", min + (x - 1.0) * step + 4, min + (y - 1.0) * step + 13)\n				else\n					love.graphics.setColor( 200, 0, 0 )\n					love.graphics.print( \"f\", min + (x - 1.0) * step + 4, min + (y - 1.0) * step + 13)\n				end\n				\n			end\n		end\n	\n	end\n	\n	function game:drawGrid(step, min, max)\n		for i = 0, 9 do\n			if i % 3 == 0 then \n				love.graphics.setLineWidth(3)\n			else\n				love.graphics.setLineWidth(1)\n			end\n			love.graphics.line( min + i * step, min 		  , min + i * step, max 		   )\n			love.graphics.line( min			  , min + i * step, max			  , min + i * step )\n		end\n	end\n	\n	function game:drawSelections(step, min, max)\n		if validSelection( self.selection.subsquare ) and validSelection( self.selection.square ) then\n			love.graphics.setColor( 0, 120, 0 )\n			love.graphics.setLineWidth(3)\n			local x, y = translateNumber( self.selection.square )\n			local sx, sy = min + step * 3 * x, min + step * 3 * y\n			love.graphics.rectangle( \"line\", sx, sy, step * 3, step * 3 )\n			\n			love.graphics.setColor( 0, 255, 0 )\n			love.graphics.setLineWidth(1)\n			x, y = translateNumber( self.selection.subsquare )\n			local dx, dy = sx + x * step, sy + y * step\n			love.graphics.rectangle( \"line\", dx, dy, step, step )\n		elseif validSelection( self.selection.square ) then\n			love.graphics.setColor( 0, 255, 0 )\n			love.graphics.setLineWidth(3)\n			local x, y = translateNumber( self.selection.square )\n			love.graphics.setLineWidth(3)\n			local sx, sy = min + step * 3 * x, min + step * 3 * y\n			love.graphics.rectangle( \"line\", sx, sy, step * 3, step * 3 )\n		end\n	end\n	\n--[[ draws GUI ]]\n	function game:drawGUI()\n		if self.state == \"pregame\" then\n			love.graphics.print( \"Press 1 for a garbled random board\", 100, 100 )\n			love.graphics.print( \"Press 2 for a totally empty board\", 100, 120 )\n			love.graphics.setColor( 100, 0, 0 )\n			love.graphics.print( \"Press 3 for a test filling algorithm\", 100, 140 ) --not yet\n		end\n	\n	end\n	\n--[[ keypress handling ]]\n	function game:keyPress(k, u)\n		if self.state == \"pregame\" then\n			if k == \"1\" then\n				self:testBed()\n				self.state = \"play\"\n			elseif k == \"2\" then\n				self.state = \"play\"\n			end\n			return\n		end\n	\n		local numberKey = validKey( k ) --current key\n		if numberKey and self.state == \"play\" then \n			self:handleKeyNumber(numberKey) \n			return --don't continue keypress, not that it's required now\n		end\n		\n	end\n	\n--[[ handle selection press ]]\n	function game:handleKeyNumber(num)\n	\n		if num == -1 then -- doesn't do anything yet\n			if validSelection( self.selection.last[1] ) and validSelection( self.selection.last[2] ) then\n				self.selection.square 		= self.selection.last[1]\n				self.selection.subsquare 	= self.selection.last[2]\n				self.selection.last = nil\n			end\n		elseif num == 0 then -- backs a selection\n			if validSelection( self.selection.subsquare ) and validSelection( self.selection.square ) then\n				self.selection.subsquare = 0\n			elseif validSelection( self.selection.square ) then\n				self.selection.square = 0\n			end\n		elseif validSelection( self.selection.subsquare ) then  -- tries to set a value\n			self:setNumber( num, self.selection.subsquare, self.selection.square )\n		elseif validSelection( self.selection.square ) then -- sets selection to a valid sub-square\n			if validSelection( num ) then\n				--local cx, cy = coordinateFromSquares( self.selection.square, num )\n				--if self.field[cx][cy].ed then\n				--	self.selection.subsquare = num\n				--end\n				if self:getNumberSq( self.selection.square, num, true ).ed then\n					self.selection.subsquare = num\n				end\n			end\n		else -- sets a slection square\n			self.selection.square = num\n		end\n		\n	end\n	\n--[[subsquare method of setting numbers]]\n	function game:setNumber( num, sub, sq )\n		self.selection.last = { self.selection.square, self.selection.subsquare }\n		self.selection.number 		= 0\n		self.selection.subsquare 	= 0\n		self.selection.square 		= 0\n				\n		local cx, cy = coordinateFromSquares( sq, sub )\n				\n		--check if allowed to change number\n		if self.field[cx][cy].ed then \n			self.field[cx][cy].val = num\n			self.selection.number 		= 0\n			self.selection.subsquare 	= 0\n			self.selection.square 		= 0\n			self:notifyChange(cx, cy)\n			return true -- SUCCESS\n		end\n		\n		return false --UNSUCCESS\n	end\n	\n	--[[based on squares returns value and edit flag OR the cell table]]\n	function game:getNumberSq(sq, sub, tab)\n		local cx, cy = coordinateFromSquares( sq, sub )\n		if tab then return self.field[cx][cy] end\n		return self.field[cx][cy].val, self.field[cx][cy].ed\n	end\n	\n	--[[based on x,y returns value and edit flag OR the cell table]]\n	function game:getNumber(x, y, tab)\n		if tab then return self.field[x][y] end\n		return self.field[x][y].val, self.field[x][y].ed\n	end\n	\n	--[[ returns a list with values from row ]]\n	function game:getRowList( row )\n		local tab = {}\n		for i = 1, 9 do\n			--tab[i] = self.field[row][i].val\n			tab[i] = self:getNumber(row, i)\n		end\n		return tab\n	end\n	\n	--[[ returns a list with values from column ]]\n	function game:getColumnList( column )\n		local tab = {}\n		for i = 1, 9 do\n			--tab[i] = self.field[i][column].val\n			tab[i] = self:getNumber(i, column)\n		end\n		return tab\n	end\n	\n	--[[ returns a list with values from a square ]]\n	function game:getSquareList( sq )\n		local tab = {}\n		for i = 1, 9 do\n			local cx, cy = coordinateFromSquares( sq, i )\n			tab[i] = self:getNumber(cx, cy)\n		end\n		return tab\n	end\n	\n	\n	function game:notifyChange( x, y)\n		local row, column, square = y, x, squaresFromCoordinates(x, y)\n\n		local row_tab = \n\n\n	end\n\n	\n	return game\n	\nend\n\nfunction validSelection( num )\n	if type(num) == \"number\" then \n		return num > 0 and num < 10 \n	end\n	return false \nend\n\n--[[ filters and transforms keyboard input ]]\nfunction validKey( key )\n	if key == \"kp0\" or key == \"0\" then return 0 end\n	if key == \"kp1\" or key == \"1\" then return 1 end\n	if key == \"kp2\" or key == \"2\" then return 2 end\n	if key == \"kp3\" or key == \"3\" then return 3 end\n	if key == \"kp4\" or key == \"4\" then return 4 end\n	if key == \"kp5\" or key == \"5\" then return 5 end\n	if key == \"kp6\" or key == \"6\" then return 6 end\n	if key == \"kp7\" or key == \"7\" then return 7 end\n	if key == \"kp8\" or key == \"8\" then return 8 end\n	if key == \"kp9\" or key == \"9\" then return 9 end\n	if key == \"kp.\" or key == \".\" then return -1 end\n	return nil\nend\n\n--[[translates square into relative coordinates]]\nfunction translateNumber( num )\n	if num == 1 then return 0, 2 end\n	if num == 2 then return 1, 2 end\n	if num == 3 then return 2, 2 end\n	if num == 4 then return 0, 1 end\n	if num == 5 then return 1, 1 end\n	if num == 6 then return 2, 1 end\n	if num == 7 then return 0, 0 end\n	if num == 8 then return 1, 0 end\n	if num == 9 then return 2, 0 end\n	return nil\nend\n\n--[[ translates numpad sequence into normal sequence ]]\nfunction selectionToArray( num )\n	if num == 1 then return 7 end\n	if num == 2 then return 8 end\n	if num == 3 then return 9 end\n	if num == 4 then return 4 end\n	if num == 5 then return 5 end\n	if num == 6 then return 6 end\n	if num == 7 then return 1 end\n	if num == 8 then return 2 end\n	if num == 9 then return 3 end\nend\n\n--[[transforms squares into absolute coordinates]]\nfunction coordinateFromSquares( sq, sub )\n	local nx, ny = translateNumber( sq )\n	local sx, sy = translateNumber( sub )\n	return nx * 3 + sx + 1, ny * 3 + sy + 1\nend\n\n--[[transforms absolute coordinates into squares]]\nfunction squaresFromCoordinates( x, y )\n	local subx = (x - 1) % 3\n	local sqx  = ((x - 1) - subx) / 3\n	local suby = (y - 1) % 3\n	local sqy  = ((y - 1) - suby) / 3\n	return numbersFromCoordinates( sqx, sqy ), numbersFromCoordinates( suby, sqy )\nend\n\n--[[transforms relative coordinates into square]]\nfunction numbersFromCoordinates( x, y )\n	if x == 0 and y == 0 then return 7 end\n	if x == 1 and y == 0 then return 8 end\n	if x == 2 and y == 0 then return 9 end\n	if x == 0 and y == 1 then return 4 end\n	if x == 1 and y == 1 then return 5 end\n	if x == 2 and y == 1 then return 6 end\n	if x == 0 and y == 2 then return 1 end\n	if x == 1 and y == 2 then return 2 end\n	if x == 2 and y == 2 then return 3 end\n	return 0\nend\n\n--[[utility function for random probability]]\nfunction testL( level )\n	return math.random() < level\nend\n\n--[[utility function for random numbers]]\nfunction testN()\n	return math.floor( math.random() * 8 + 1 )\nend\n\n\n\n\n",
+			"file": "board.lua",
+			"file_size": 13011,
+			"file_write_time": 130267476242343750,
+			"settings":
+			{
+				"buffer_size": 12600,
+				"line_ending": "Windows"
+			}
+		},
+		{
+			"contents": "\nlocal pooltable = {}\n\npooltable.valpool	= {}\npooltable.excluded	= {}\n\n--[[\nvalpool = {1, 2, 3, 4, 5, 6, 7, 8, 9}\n]]\n\n--[[ Gives values ]]\nfunction pooltable:values(...)\n	pooltable.valpool = {...}\nend\n\n--[[creates a new pooltable]]\n--Not sure about viability of this method\nfunction pooltable:new(...)\n	tab = table.copy(self)\n	tab:values(...)\n	tab.new = nil\nend\n\n--[[ ]]\nfunction pooltable:giveValue(exclusions)\n	if exclusions then\n		tab = {}\n		tab = table.copy(self.valpool)\n	return end\nend\n\n--[[ UTILITY ]]\nfunction table.copy(tab)\n	tbl = {}\n	for k, v in pairs(tab) do\n		if type(v) == \"table\" then \n			tbl[k] = {}\n			tbl[k] = table.copy(v) --recursion ho!\n		else\n			tbl[k] = v\n		end\n	end\n	return tbl\nend\n\nfunction table.getNumberCounts( tab )\n	local test = {}\n	for k, v in pairs( tab ) do\n		test[v] = (test[v] or 0) + 1 \n\n\n	end\nend\n\nfunction table.allOfValue(tab, val)\n	if not val then val = 1 end\n	for k, v in pairs( tab ) do\n		if not v == val then return false end\n	end\n	return true\nend\n\nlocal function fullTable()\n	return { 1, 2, 3, 4, 5, 6, 7, 8, 9 }\nend\n\n",
+			"file": "pooltable.lua",
+			"file_size": 934,
+			"file_write_time": 130262197746325785,
+			"settings":
+			{
+				"buffer_size": 1062,
+				"line_ending": "CR"
+			}
+		}
+	],
+	"build_system": "Packages/User/Love2d.sublime-build",
+	"command_palette":
+	{
+		"height": 0.0,
+		"selected_items":
+		[
+		],
+		"width": 0.0
+	},
+	"console":
+	{
+		"height": 0.0,
+		"history":
+		[
+		]
+	},
+	"distraction_free":
+	{
+		"menu_visible": true,
+		"show_minimap": false,
+		"show_open_files": false,
+		"show_tabs": false,
+		"side_bar_visible": false,
+		"status_bar_visible": false
+	},
+	"file_history":
+	[
+		"/D/gaems/Gits/Lua-sudoku/menu.lua",
+		"/C/Documents and Settings/user/Application Data/Sublime Text 3/Packages/User/Preferences.sublime-settings",
+		"/C/Documents and Settings/user/Application Data/Sublime Text 3/Packages/User/Love2d.sublime-build",
+		"/D/gaems/Programs/TASM/bitops/kodas.asm"
+	],
+	"find":
+	{
+		"height": 0.0
+	},
+	"find_in_files":
+	{
+		"height": 0.0,
+		"where_history":
+		[
+		]
+	},
+	"find_state":
+	{
+		"case_sensitive": false,
+		"find_history":
+		[
+		],
+		"highlight": true,
+		"in_selection": false,
+		"preserve_case": false,
+		"regex": false,
+		"replace_history":
+		[
+		],
+		"reverse": false,
+		"show_context": true,
+		"use_buffer2": true,
+		"whole_word": false,
+		"wrap": true
+	},
+	"groups":
+	[
+		{
+			"selected": 2,
+			"sheets":
+			[
+				{
+					"buffer": 0,
+					"file": "main.lua",
+					"semi_transient": false,
+					"settings":
+					{
+						"buffer_size": 799,
+						"regions":
+						{
+						},
+						"selection":
+						[
+							[
+								539,
+								539
+							]
+						],
+						"settings":
+						{
+							"syntax": "Packages/Lua/Lua.tmLanguage",
+							"translate_tabs_to_spaces": false
+						},
+						"translation.x": 0.0,
+						"translation.y": 0.0,
+						"zoom_level": 1.0
+					},
+					"type": "text"
+				},
+				{
+					"buffer": 1,
+					"file": "board.lua",
+					"semi_transient": false,
+					"settings":
+					{
+						"buffer_size": 12600,
+						"regions":
+						{
+						},
+						"selection":
+						[
+							[
+								9849,
+								9849
+							]
+						],
+						"settings":
+						{
+							"syntax": "Packages/Lua/Lua.tmLanguage",
+							"translate_tabs_to_spaces": false
+						},
+						"translation.x": 0.0,
+						"translation.y": 2409.0,
+						"zoom_level": 1.0
+					},
+					"type": "text"
+				},
+				{
+					"buffer": 2,
+					"file": "pooltable.lua",
+					"semi_transient": false,
+					"settings":
+					{
+						"buffer_size": 1062,
+						"regions":
+						{
+						},
+						"selection":
+						[
+							[
+								822,
+								822
+							]
+						],
+						"settings":
+						{
+							"syntax": "Packages/Lua/Lua.tmLanguage",
+							"translate_tabs_to_spaces": false
+						},
+						"translation.x": 0.0,
+						"translation.y": 0.0,
+						"zoom_level": 1.0
+					},
+					"type": "text"
+				}
+			]
+		}
+	],
+	"incremental_find":
+	{
+		"height": 0.0
+	},
+	"input":
+	{
+		"height": 0.0
+	},
+	"layout":
+	{
+		"cells":
+		[
+			[
+				0,
+				0,
+				1,
+				1
+			]
+		],
+		"cols":
+		[
+			0.0,
+			1.0
+		],
+		"rows":
+		[
+			0.0,
+			1.0
+		]
+	},
+	"menu_visible": true,
+	"output.exec":
+	{
+		"height": 182.0
+	},
+	"project": "sudoku-proj.sublime-project",
+	"replace":
+	{
+		"height": 0.0
+	},
+	"save_all_on_build": true,
+	"select_file":
+	{
+		"height": 0.0,
+		"selected_items":
+		[
+		],
+		"width": 0.0
+	},
+	"select_project":
+	{
+		"height": 0.0,
+		"selected_items":
+		[
+		],
+		"width": 0.0
+	},
+	"select_symbol":
+	{
+		"height": 0.0,
+		"selected_items":
+		[
+		],
+		"width": 0.0
+	},
+	"settings":
+	{
+	},
+	"show_minimap": true,
+	"show_open_files": false,
+	"show_tabs": true,
+	"side_bar_visible": true,
+	"side_bar_width": 259.0,
+	"status_bar_visible": true,
+	"template_settings":
+	{
+	}
+}
